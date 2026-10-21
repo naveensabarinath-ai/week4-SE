@@ -1,0 +1,447 @@
+{
+  "name": "W4_D2_LinkedIn Post Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "LinkedIn Post Generator",
+        "formDescription": "Submit a topic for your AI-generated LinkedIn post.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Topic",
+              "placeholder": "Enter the topic"
+            },
+            {
+              "fieldLabel": "ApprovalEmail",
+              "fieldType": "email",
+              "placeholder": "Approval Email",
+              "defaultValue": "naveengenai2026@gmail.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -32,
+        96
+      ],
+      "id": "db13ea43-4722-4d58-9050-41f0eba86c57",
+      "webhookId": "15e004b8-de97-44c3-88d5-b07aa85c7409"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a LinkedIn post about: {{ $json.Topic }}\nHook in line one, 120-150 words, one call to action,\nmax 3 hashtags. Return the post only.\nPlease do google search if more input needed",
+        "options": {}
+      },
+      "name": "Writer Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        176,
+        -96
+      ],
+      "id": "37f85364-26b2-475f-ab49-8771fc9f764a"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1-mini",
+        "options": {}
+      },
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        80,
+        256
+      ],
+      "id": "d4671cdc-c71b-4c31-97a8-213631898957",
+      "credentials": {
+        "openAiApi": {
+          "id": "E2xbYHuFOh2DnMDP",
+          "name": "OpenAI account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Score the post below out of 10 on hook, clarity and CTA,\nthen rewrite its weakest part. Return the final post only.\n{{ $json.output }}\nPlease do google search if more input needed\n",
+        "options": {}
+      },
+      "name": "Reviewer Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        448,
+        160
+      ],
+      "id": "6f041612-3d4a-4a1b-82a5-a532d09468c8"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1-mini",
+        "options": {}
+      },
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        288,
+        368
+      ],
+      "id": "55a6b6d3-42ff-41b1-bb4e-af81663d41e1",
+      "credentials": {
+        "openAiApi": {
+          "id": "E2xbYHuFOh2DnMDP",
+          "name": "OpenAI account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "={{ $('On form submission').item.json.ApprovalEmail }}",
+        "subject": "=LinkedIn Post Approval Required For Topic :  {{ $('On form submission').item.json.Topic }}",
+        "message": "=Please review the drafted LinkedIn post below and approve or reject:\n\n{{ $json.output }}",
+        "options": {}
+      },
+      "name": "Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        752,
+        -32
+      ],
+      "id": "1b116cf3-78df-4754-86ed-81a999c3427e",
+      "webhookId": "06a248c3-0d80-41fa-b505-1f45dd0fa281",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rpPpPDkJ2SUgniyv",
+          "name": "NaveenGenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "approval-condition",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "If Approved",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        144
+      ],
+      "id": "acb2f49f-40c2-45f4-bb23-f3371cfe1770"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1HOScPUuNF3SO92SyATX_EBc8Sqtsee0NwezEL6iAqGQ/edit?gid=1334553834#gid=1334553834",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1334553834,
+          "mode": "list",
+          "cachedResultName": "LinkedIn",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HOScPUuNF3SO92SyATX_EBc8Sqtsee0NwezEL6iAqGQ/edit#gid=1334553834"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Topic": "={{ $('On form submission').item.json.Topic }}",
+            "Approval Date": "={{ DateTime.fromISO($('On form submission').item.json.submittedAt).toFormat('yyyy-MM-dd') }}",
+            "LinkedInPost": "={{ $('Writer Agent').item.json.output }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Approval Date",
+              "displayName": "Approval Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "LinkedInPost",
+              "displayName": "LinkedInPost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1088,
+        -80
+      ],
+      "id": "863e3c00-3841-4ba9-9357-937878479119",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WtJOcnCYjtR1lTqS",
+          "name": "NaveenGenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=Key_ {{ $('On form submission').item.json[\"Enter TopicName\"] }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        208,
+        160
+      ],
+      "id": "b0cca580-9a92-45f1-a92d-4e6049c19ffd",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "q": "={{ $('On form submission').item.json.Topic }}",
+        "location": "=India",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-serpapi.serpApiTool",
+      "typeVersion": 1,
+      "position": [
+        304,
+        96
+      ],
+      "id": "a1ce7f86-e57b-496f-af55-9e41fcf200f6",
+      "name": "Google search in SerpApi",
+      "credentials": {
+        "serpApi": {
+          "id": "z2JQ1U29v8qKSMbU",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=KeyW_ {{ $('On form submission').item.json[\"Enter TopicName\"] }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        432,
+        352
+      ],
+      "id": "a72e2501-9c26-40fa-ac8b-6502ab305009",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "q": "={{ $('On form submission').item.json.Topic }}",
+        "location": "=India",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-serpapi.serpApiTool",
+      "typeVersion": 1,
+      "position": [
+        560,
+        352
+      ],
+      "id": "2a276c83-5e31-4693-94d9-2279a589c54f",
+      "name": "Google search in SerpApi1",
+      "credentials": {
+        "serpApi": {
+          "id": "z2JQ1U29v8qKSMbU",
+          "name": "SerpApi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Writer Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Writer Agent": {
+      "main": [
+        [
+          {
+            "node": "Reviewer Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reviewer Agent": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "If Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Approved": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Writer Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Reviewer Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Writer Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google search in SerpApi": {
+      "ai_tool": [
+        [
+          {
+            "node": "Writer Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Reviewer Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google search in SerpApi1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reviewer Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "314f7b88-f77d-4bdd-815d-3090f0f68589",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "597c905018e403e1580d376b74b543c78dd4564cc10eca1cc0b79970908696eb"
+  },
+  "nodeGroups": [],
+  "id": "n0VAT1LLQNNSvQWc",
+  "tags": []
+}
