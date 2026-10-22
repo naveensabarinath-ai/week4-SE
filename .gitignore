@@ -153,6 +153,7 @@ activemq-data/
 .env
 .envrc
 .venv
+crewai_env/
 env/
 venv/
 ENV/
